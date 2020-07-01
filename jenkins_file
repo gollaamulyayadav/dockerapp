@@ -1,0 +1,30 @@
+node{
+    stage('SCM Checkout'){
+        git credentialsId: 'gitpd ', url: 'https://github.com/gollaamulyayadav/dockerapp.git'
+        
+            }
+    stage ('Mvn Package'){
+        def mvnHome = tool name: 'MAVEN', type: 'maven'
+        def mvnCMD = "/usr/bin/mvn"
+        sh "${mvnCMD} clean package"
+    }
+    stage ('Build Docker Image'){
+        sh 'docker build -t amulyayadav/docker_test:1 .'
+    }
+    stage ('Push Docker Image'){
+        withCredentials([string(credentialsId: 'dockerhubpwd', variable: 'dockerpwd')]) {
+    sh "docker login -u amulyayadav -p ${dockerpwd}"
+    }
+
+        sh 'docker push amulyayadav/docker_test:1'
+    }
+    
+
+    stage('Run Container on Dev Server'){
+        def dockerrun = 'docker run -p 8080:8080 -d -name dev amulyayadav/docker_test:1'
+        sshagent (credentials: ['ec2 instance']) {
+            sh "ssh -o StrictHostKeyChecking=no ec2-user@172.31.46.52 ${dockerrun}"
+
+    }
+}
+}
